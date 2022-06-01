@@ -1,8 +1,10 @@
-# Welcome to PhoenixBot!
+Welcome to PhoenixBot!
+======================
 
 PhoenixBot is the project about autonomous EV charging.
 
-## To run experiment:
+To run experiment:
+=================
 
 1. Fine tune the model. To set the TCP with respect to model systematic error.
 
@@ -10,7 +12,7 @@ PhoenixBot is the project about autonomous EV charging.
 
 3. Set views for rough pose estimation.
 
-## Model fine tuning.
+
 
 
 
