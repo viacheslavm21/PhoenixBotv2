@@ -13,7 +13,8 @@ from threading import Thread
 from time import sleep
 import json
 from models.ResNet50_model import get_model as get_ResNet50
-from dirty_calib_test import Experiment, CalibrationModel
+from calib_test import Experiment, CalibrationModel
+from optimize_camera_calib import CameraOpt
 from scipy.spatial.transform import Rotation as R
 
 EXPOSURE_VALUE = 150
@@ -118,12 +119,8 @@ def mouse_callback(event, x, y, flags, param):
                 pool.end_down = robot.getl()[:3]
 
 
-
-def run_experiment(args):
-
-    go = Experiment([1], save_or_read='save')
-
-    pool = args
+def run_experiment(*args):
+    pool, optimize_camera_calibration, debug = args
 
     # Step 1: Set boundaries for viewing
 
@@ -193,18 +190,55 @@ def run_experiment(args):
 
     pool.text = f'Wait until image collection is finished.'
 
-    n = 10
+    #print(pool.begin_down, pool.end_down, pool.begin_up, pool.end_up)
+
+    n = 2
+
+
+    begin_up = pool.begin_up
+    end_up = pool.end_up
+    img_count = 0
+    print("Up boundaries")
+    print(np.concatenate((begin_up,pool.ori_up)),
+          np.concatenate((end_up,pool.ori_up)))
+
+    if debug:
+        begin_up = [0.76317143, 0.04606918, 0.61435412]
+        end_up = [0.76316919, -0.02990835, 0.59236572]
+
+    for y in np.linspace(begin_up[1],end_up[1],n):
+        for z in np.linspace(begin_up[2],end_up[2],n):
+            ori_up = pool.ori_up
+            if debug:
+                ori_up = [1.40903893,  1.36964326,  0.97971153]
+            #for i in range(3):
+            #    ori_up[i] = ori_up[i] + np.random.uniform(-0.05, 0.05)
+
+            x = np.linspace(begin_up[0], end_up[0], n * 10)[img_count]
+            pose_vec = [x, y, z, ori_up[0], ori_up[1], ori_up[2]]
+            robot.movel(pose_vec, vel=0.25, acc=0.35)
+            save_data(pool, img_count, 'up')
+            img_count += 1
+            sleep(1.0)
 
     begin_down = pool.begin_down
     end_down = pool.end_down
     img_count = 0
-    for y in np.linspace(begin_down[1],end_down[1],n):
-        for z in np.linspace(begin_down[2],end_down[2],n):
-            ori_down = pool.ori_down
+    print("Down boundaries")
+    print(np.concatenate((begin_down,pool.ori_down)),
+          np.concatenate((end_down,pool.ori_down)))
 
-            for i in range(3):
-                ori_down[i] = ori_down[i] + np.random.uniform(-0.05, 0.05)
-            pose_vec = [begin_down[0],y,z,ori_down[0],ori_down[1],ori_down[2]]
+    if debug:
+        begin_down = [0.76320912, - 0.0298756,   0.52913839]
+        end_down = [0.76313912, 0.03570664, 0.493664]
+
+    for y in np.linspace(begin_down[1], end_down[1], n):
+        for z in np.linspace(begin_down[2], end_down[2], n):
+            x = np.linspace(begin_down[0], end_down[0], n*10)[img_count]
+            ori_down = pool.ori_down
+            if debug:
+                ori_down = [1.2142219, 1.15684038, 1.13323442]
+            pose_vec = [x, y, z, ori_down[0], ori_down[1], ori_down[2]]
             robot.movel(pose_vec, vel=0.25, acc=0.35)
             save_data(pool, img_count, 'down')
             img_count += 1
@@ -212,139 +246,92 @@ def run_experiment(args):
 
     begin_right = pool.begin_right
     end_right = pool.end_right
-
     img_count = 0
-    for y in np.linspace(begin_right[1],end_right[1],n):
-        for z in np.linspace(begin_right[2],end_right[2],n):
-            ori_right = pool.ori_right
+    print("Right boundaries")
+    print(np.concatenate((begin_right,pool.ori_right)),
+          np.concatenate((end_right,pool.ori_right)))
 
-            for i in range(3):
-                ori_right[i] = ori_right[i] + np.random.uniform(-0.05, 0.05)
-            pose_vec = [begin_right[0],y,z,ori_right[0],ori_right[1],ori_right[2]]
+    if debug:
+        begin_right = [0.76320812, - 0.08503204,  0.53461637]
+        end_right = [0.76315605, - 0.13947306, 0.55563164]
+
+
+    for y in np.linspace(begin_right[1], end_right[1], n):
+        for z in np.linspace(begin_right[2], end_right[2], n):
+            ori_right = pool.ori_right
+            if debug:
+                ori_right = [1.10240255, 1.50591011, 1.31402318]
+            #for i in range(3):
+            #    ori_right[i] = ori_right[i] + np.random.uniform(-0.05, 0.05)
+
+            x = np.linspace(begin_right[0], end_right[0], n * 10)[img_count]
+            pose_vec = [x, y, z, ori_right[0], ori_right[1], ori_right[2]]
             robot.movel(pose_vec, vel=0.25, acc=0.35)
             save_data(pool, img_count, 'right')
             img_count += 1
             sleep(1.0)
 
-
     begin_left = pool.begin_left
     end_left = pool.end_left
-
     img_count = 0
-    for y in np.linspace(begin_left[1],end_left[1],n):
-        for z in np.linspace(begin_left[2],end_left[2],n):
+    print("Left boundaries")
+    print(np.concatenate((begin_left,pool.ori_left)),
+          np.concatenate((end_left,pool.ori_left)))
+
+    if debug:
+        begin_left = [0.76315976, 0.03132591, 0.57389706]
+        end_left = [0.76314426, 0.09697606, 0.53464401]
+
+    for y in np.linspace(begin_left[1], end_left[1], n):
+        for z in np.linspace(begin_left[2], end_left[2], n):
             ori_left = pool.ori_left
-            for i in range(3):
-                ori_left[i] = ori_left[i] + np.random.uniform(-0.05, 0.05)
-            pose_vec = [begin_left[0],y,z,ori_left[0],ori_left[1],ori_left[2]]
+            if debug:
+                ori_left = [1.4065642, 1.05634515, 0.89878902]
+            #for i in range(3):
+            #    ori_left[i] = ori_left[i] + np.random.uniform(-0.05, 0.05)
+
+            x = np.linspace(begin_left[0], end_left[0], n * 10)[img_count]
+            pose_vec = [x, y, z, ori_left[0], ori_left[1], ori_left[2]]
             robot.movel(pose_vec,  vel=0.25, acc=0.35)
             save_data(pool, img_count, 'left')
             img_count+=1
             sleep(1.0)
 
-    begin_up = pool.begin_up
-    end_up = pool.end_up
-
-    img_count = 0
-    for y in np.linspace(begin_up[1],end_up[1],n):
-        for z in np.linspace(begin_up[2],end_up[2],n):
-            ori_up = pool.ori_up
-            for i in range(3):
-                ori_up[i] = ori_up[i] + np.random.uniform(-0.05, 0.05)
-            pose_vec = [begin_up[0],y,z,ori_up[0],ori_up[1],ori_up[2]]
-            robot.movel(pose_vec, vel=0.25, acc=0.35)
-            save_data(pool, img_count, 'up')
-            img_count += 1
-            sleep(1.0)
 
     pool.text = f'Image collection is finished.'
     time.sleep(2)
 
     # pool.text = f'Optimizing camera calibration.'
 
-    calib_model = CalibrationModel()
-
     mtx = np.asarray([[634.14800253, 0., 629.36554151],
                            [0., 634.13672323, 361.22908492],
                            [0., 0., 1., ]])
-    R_cam2gripper = R.from_rotvec([-0.02193857, -0.03329439, -3.14092666]).as_matrix()
-    t_cam2gripper = [[-11.93768264], [118.74955747], [207.06885955]]
+    R_cam2gripper = [ 1.08406012e-02,  4.97508834e-02,  3.13081739e+00]
+    t_cam2gripper = [-1.15373626e+01,  1.14326648e+02,  2.13237716e+02]
+
     dist = np.asarray([[-0.053358, 0.05795461, -0.00042388, 0.00043828, -0.01121712]])
 
     calib_model = CalibrationModel(intrinsic=mtx, distortion=dist, name='finetune_calib')
     calib_model.fill_extrinsic(R_cam2gripper=R_cam2gripper,
                                t_cam2gripper=t_cam2gripper)
 
+    go = Experiment(img_folder="data/finetunes/my_finetune", save_or_read='save')
+
+    if optimize_camera_calibration:
+        camera_opt = CameraOpt(env_name="data/finetunes/my_finetune", pred_filename_b="data/bboxes_prediction_dict_from_etune.pickle", pred_filename_k="data/keypoint_prediction_dict_from_etune.pickle",save_or_read='read', initial_calib_model=calib_model)
+        #opt_hand_eye = camera_opt.optimize_calib_re_least_squares(calib_model)
+        opt_hand_eye = camera_opt.optimize_calib_re_least_squares(calib_model)#, experiment=go)
+
+
+        print("opt_hand_eye", opt_hand_eye)
+        calib_model.fill_extrinsic(R_cam2gripper=opt_hand_eye[0],
+                                   t_cam2gripper=opt_hand_eye[1])
+
+
     # pool.text = f'Camera calibration is optimized.'
     # time.sleep(2)
-
     pool.text = f'Predicting socket points.'
     go.experiment_series_calibrations([calib_model], ['finetune_calib'])
-
-    """
-        begin_down = [0.8572998862773443, 0.04669753164975192, 0.55424054601676]
-    end_down = [0.8572726748339248, -0.025224131112807004, 0.5728942086892206]
-
-    img_count = 0
-    for y in np.linspace(begin_down[1],end_down[1],n):
-        for z in np.linspace(begin_down[2],end_down[2],n):
-            ori_down = [1.265474089573716, 1.1185596344806958, 1.1163144977202624]
-
-            for i in range(3):
-                ori_down[i] = ori_down[i] + np.random.uniform(-0.05, 0.05)
-            pose_vec = [begin_down[0],y,z,ori_down[0],ori_down[1],ori_down[2]]
-            robot.movel(pose_vec, vel=0.25, acc=0.35)
-            save_data(img_count, 'down')
-            img_count += 1
-            sleep(1.0)
-
-    begin_right = [0.8580309371569254, -0.12110425235186006, 0.5916651774851597]
-    end_right = [0.8580110126067423, -0.19531582008672357, 0.5667821685406375]
-
-    img_count = 0
-    for y in np.linspace(begin_right[1],end_right[1],n):
-        for z in np.linspace(begin_right[2],end_right[2],n):
-            ori_right = [1.0304238386050677, 1.527112162054058, 1.446301452005834]
-
-            for i in range(3):
-                ori_right[i] = ori_right[i] + np.random.uniform(-0.05, 0.05)
-            pose_vec = [begin_right[0],y,z,ori_right[0],ori_right[1],ori_right[2]]
-            robot.movel(pose_vec, vel=0.25, acc=0.35)
-            save_data(img_count, 'right')
-            img_count += 1
-            sleep(1.0)
-
-
-    begin_left = [0.8655120626548728, 0.08127379720628629, 0.57827360810733]
-    end_left = [0.8655158757027868, 0.1341425776240957, 0.5506184797376877]
-
-    img_count = 0
-    for y in np.linspace(begin_left[1],end_left[1],n):
-        for z in np.linspace(begin_left[2],end_left[2],n):
-            ori_left = [ 1.3883282782993385, 0.8758122517997624, 0.8735844784399638]
-            for i in range(3):
-                ori_left[i] = ori_left[i] + np.random.uniform(-0.05, 0.05)
-            pose_vec = [begin_left[0],y,z,ori_left[0],ori_left[1],ori_left[2]]
-            robot.movel(pose_vec,  vel=0.25, acc=0.35)
-            save_data(img_count, 'left')
-            img_count+=1
-            sleep(1.0)
-
-    begin_up = [0.8363403845934372, -0.026240635691044466, 0.6973899081056515]
-    end_up = [0.8363190728110094, 0.041234593738884454, 0.7220265810802895]
-
-    img_count = 0
-    for y in np.linspace(begin_up[1],end_up[1],n):
-        for z in np.linspace(begin_up[2],end_up[2],n):
-            ori_up = [1.550006780007305, 1.432632747485671, 0.8623123515022114]
-            for i in range(3):
-                ori_up[i] = ori_up[i] + np.random.uniform(-0.05, 0.05)
-            pose_vec = [begin_up[0],y,z,ori_up[0],ori_up[1],ori_up[2]]
-            robot.movel(pose_vec, vel=0.25, acc=0.35)
-            save_data(img_count, 'up')
-            img_count += 1
-            sleep(1.0)
-    """
 
 class FramePool:
     def __init__(self):
@@ -421,17 +408,30 @@ class FramePool:
               is_flag=False,
               default=150,
               show_default=True)
+@click.option('-rndori',
+              '--randomize-orientation',
+              help="Add random term to orientation during scanning",
+              type=click.BOOL,
+              is_flag=True,
+              default=False,
+              show_default=True)
 @click.option('-camopt',
               '--optimize-camera-calibration',
               help="TBD",
               type=click.BOOL,
               is_flag=True,
-              default=False,
+              default=True,
               show_default=True)
-def main(exposure_value: int, optimize_camera_calibration: bool):
-
+@click.option('-d',
+              '--debug',
+              help="Debug mode",
+              type=click.BOOL,
+              is_flag=True,
+              default=True,
+              show_default=True)
+def main(exposure_value: int, randomize_orientation: bool, optimize_camera_calibration: bool, debug: bool):
     pool = FramePool()
-    args = [pool]
+    args = [pool, optimize_camera_calibration, debug]
     moving_thread = Thread(target=run_experiment, daemon=True, args=args)
     moving_thread.start()
     frame_update_thread = Thread(target=pool.update, daemon=True)

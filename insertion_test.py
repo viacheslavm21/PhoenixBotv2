@@ -26,7 +26,7 @@ from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog
 
 from insertion_utils import triangulate
-import data.experiments.insertion.input_points as pts
+#import data.experiments.insertion.input_points as pts
 
 from models.ResNet50_model import get_model as get_ResNet50
 from models.detectron2_MaskRCNN import get_model as get_MaskRCNN
@@ -84,7 +84,7 @@ class ResNetCV():
         self.rough_model = get_MaskRCNN(weights_path='data/outputs/MaskRCNN_model_0164999.pth', device=0)
         self.rough_model_metadata = MetadataCatalog.get('CBR1_train')
 
-        self.precise_model = get_ResNet50(num_keypoints=self.NUM_KEYPOINTS, weights_path='data/outputs/keypointsrcnn_weights_6_epoch260.pth', load_device=self.device)
+        self.precise_model = get_ResNet50(num_keypoints=self.NUM_KEYPOINTS, weights_path='data/outputs/keypointsrcnn_weights_10_epoch50.pth', load_device=self.device)
         self.precise_model.to(self.device)
 
         # configure robot
@@ -119,10 +119,15 @@ class ResNetCV():
                           [0.08184722, -0.01182799,  0.9965747,   0.2242077],
                           [0.,          0.,          0.,          1.]]
         # 13 May
-        plug_in_flange =   [[9.98138050e-01,  5.84703971e-02,  1.73679730e-02,  9.65761986e-04],
+
+        plug_in_flange =   [[0.9976129, 0.06628157, 0.01937152, - 0.00371728],
+         [-0.06732648, 0.99595649, 0.05947957, 0.05443973],
+         [-0.01535079, - 0.06064181, 0.99804154, 0.24816427],
+         [0., 0., 0., 1.]]
+        """plug_in_flange =   [[9.98138050e-01,  5.84703971e-02,  1.73679730e-02,  9.65761986e-04],
                             [-5.92641872e-02,  9.97020109e-01,  4.93827666e-02, - 3.50289245e-02],
                             [-1.44287883e-02, - 5.03201172e-02,        9.98628908e-01,        2.19527732e-01],
-                            [0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]]
+                            [0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]]"""# old
         self.tool = plug_in_flange
 
     def set_manual_calibration(self):
@@ -514,13 +519,7 @@ class ResNetCV():
             continue
         """
         std = np.std(points_in3d_robot_base, axis=0)
-        #print(f'points before idx {len(points)}')
-        #print(points[4])
-        #print('Keypoint positions estimated. ')
-        #print('Mean: ')
-        #print(points)
-        #print('Std: ')
-        #print(std)
+
         valid_idx = [2, 3, 4, 5,
                      7, 8,
                      10, 11, 12, 13,
@@ -1389,13 +1388,26 @@ class ResNetCV():
 
 
 def save_data(color_image, robot, img_count=0, env_id = 2, where = None):
-    path, dirs, files = next(os.walk(f'data/big_experiment/config_14May_tast_env_{env_id}/raw/{where}'))
+    try:
+        path, dirs, files = next(os.walk(f'data/big_experiment/my_env_{env_id}/raw/{where}'))
+
+
+    except Exception as e:
+
+        print(e)
+
+        path = f'data/big_experiment/my_env_{env_id}/raw/{where}'
+        print(f"Directory {path} was not found. Creating the directory...")
+        os.makedirs(path)
+        print(f"Directory {path} was created.")
+        path, dirs, files = next(os.walk(f'data/big_experiment/my_env_{env_id}/raw/{where}'))
+
+
     file_count = len(files)
     img_count = int(file_count / 2)
 
-    filename_img = f'data/big_experiment/config_14May_tast_env_{env_id}/raw/{where}/frame_env_{env_id}_{where}_' + str(img_count)
-    filename_json = f'data/big_experiment/config_14May_tast_env_{env_id}/raw/{where}/meta_env_{env_id}_{where}_' + str(img_count)
-
+    filename_img = f'data/big_experiment/my_env_{env_id}/raw/{where}/frame_env_{env_id}_{where}_' + str(img_count)
+    filename_json = f'data/big_experiment/my_env_{env_id}/raw/{where}/meta_env_{env_id}_{where}_' + str(img_count)
 
     try:
         # save raw
@@ -1422,7 +1434,7 @@ if __name__ == "__main__":
     target_g = iniJ.copy()
     target_g[0] = target_g[0] - np.deg2rad(10)
     target_g[1] = target_g[1] + np.deg2rad(10)
-    for i in range(1):
+    for i in range(100):
         # time.wait(5)
         precise_pose, reprojection_error, xy, xz, zy = go.run_single_insertion()
         print("go.run_single_insertion() finished")
